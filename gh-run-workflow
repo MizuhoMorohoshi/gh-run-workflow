@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -e
+
+workflow="$1"
+maxCount=5
+targetBranch=$(git branch --show-current)
+
+gh workflow run .github/workflows/$workflow --ref $(git branch --show-current)
+
+echo 'Waiting for the workflow starts to running ... '
+
+for (( count=1; count<maxCount ; count++ ));
+do
+    recentWorkflowStatus=$(gh run list --workflow=$workflow --branch $targetBranch --limit 1 | cut -f 1)
+    echo $recentWorkflowStatus
+    if [ $recentWorkflowStatus = "queued" ]; then
+        break;
+    fi 
+done
+
+gh run list --workflow=$workflow --branch $targetBranch --limit 1 | cut -f 7 | xargs gh run watch --exit-status
+gh run list --workflow=$workflow --branch $targetBranch --limit 1 | cut -f 7 | xargs gh run view
